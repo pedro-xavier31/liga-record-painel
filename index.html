@@ -325,6 +325,32 @@
   }
   .pfix.casa { background: rgba(255,255,255,0.4); }
 
+  /* ── Vista "Jornada (todas)" — grelha lado a lado ── */
+  /* Cores fixas (não seguem o tema) — mimetizam a grelha do site oficial. */
+  .grid-table { border-collapse: collapse; font-size: 12.5px; white-space: nowrap; }
+  .grid-table th, .grid-table td {
+    padding: 6px 12px; border-bottom: 1px solid var(--bg-surface-2); text-align: left;
+  }
+  .grid-table thead th {
+    position: sticky; top: 0; font-size: 12px; font-weight: 800; color: #14201A;
+    text-transform: uppercase; letter-spacing: 0.02em; border-bottom: none;
+  }
+  .grid-table th.grid-pts { min-width: 44px; }
+  .grid-table td.num { font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+  .grid-table .cap-mark {
+    display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--accent); color: #fff; font-size: 8.5px; font-weight: 800;
+  }
+  .grid-table tr.grid-coach td {
+    background: var(--bg-surface-2); font-weight: 700; color: var(--text-2);
+  }
+  .grid-table tr.grid-bench td { color: var(--text-muted); }
+  .grid-table tr.grid-spacer td { border-bottom: none; padding: 3px 0; }
+  .grid-table tr.grid-total td {
+    background: var(--bg-surface-2); font-weight: 800; text-transform: uppercase;
+    font-size: 11px; letter-spacing: 0.04em; color: var(--text-2);
+  }
+
   /* ── Vista "Classificação" ──────────────────────── */
   .rank-refresh { display: flex; justify-content: flex-end; margin-bottom: 10px; }
   .rank-refresh button {
@@ -422,6 +448,7 @@
       <button id="viewComuns" aria-pressed="false">Em comum</button>
       <button id="viewFormacao" aria-pressed="false">Formação</button>
       <button id="viewRanking" aria-pressed="false">Classificação</button>
+      <button id="viewGrelha" aria-pressed="false">Jornada (todas)</button>
     </div>
   </div>
 
@@ -481,21 +508,119 @@ function chaveRonda(round) {
   return "R" + (m ? m[0] : "");
 }
 
+// Um jogador marcado "DNP" (não jogou) é substituído pelo suplente da MESMA
+// posição que tenha jogado (pontuação numérica). Se não houver suplente
+// disponível (já usado, também DNP, ou não existir) esse lugar vale -1. O
+// capitão só duplica se for ele próprio a jogar — o bónus não passa para
+// quem o substitui.
 function calcularEquipaPontos(round) {
   const pontosRonda = PONTOS[chaveRonda(round)] || {};
   const jogadores = (DATA[round] || {}).jogadores || [];
+  const pontosDe = j => pontosRonda[`${j.jogador}|${j.clube || ""}`];
+
+  const porEquipa = {};
+  for (const j of jogadores) (porEquipa[j.equipa] ??= []).push(j);
+
   const pontosEquipa = {};
   let pendentes = 0;
-  for (const j of jogadores) {
-    if (!j.titular) continue;
-    const chave = `${j.jogador}|${j.clube || ""}`;
-    const bruto = pontosRonda[chave];
-    if (bruto === undefined) pendentes++;
-    let pts = bruto ?? 0;
-    if (j.capitao) pts *= 2;
-    pontosEquipa[j.equipa] = (pontosEquipa[j.equipa] || 0) + pts;
+
+  for (const [equipa, plantel] of Object.entries(porEquipa)) {
+    let total = 0;
+    for (const pos of POS_ORDER) {
+      const titulares = plantel.filter(j => j.pos === pos && j.titular)
+        .sort((a,b) => (a.slot ?? 99) - (b.slot ?? 99));
+      const banco = plantel.filter(j => j.pos === pos && !j.titular);
+
+      for (const tit of titulares) {
+        const bruto = pontosDe(tit);
+        if (bruto === undefined) { pendentes++; continue; }
+
+        if (bruto !== "DNP") {
+          total += tit.capitao ? bruto * 2 : bruto;
+          continue;
+        }
+
+        // titular não jogou — procurar suplente da mesma posição
+        let substituido = false;
+        while (banco.length) {
+          const cand = banco.shift();
+          const candPts = pontosDe(cand);
+          if (candPts === undefined) { pendentes++; continue; }
+          if (candPts === "DNP") continue;
+          total += tit.capitao ? candPts * 2 : candPts;
+          substituido = true;
+          break;
+        }
+        if (!substituido) total += -1;
+      }
+    }
+    pontosEquipa[equipa] = total;
   }
+
   return { pontosEquipa, pendentes };
+}
+
+// Detalhe jogador-a-jogador de UMA equipa (para a grelha lado a lado):
+// cada linha titular já reflete a substituição (mostra o suplente que
+// entrou, se foi caso disso) — mesma lógica de calcularEquipaPontos, mas
+// aqui devolvida por jogador em vez de só o total da equipa.
+function detalheEquipa(equipa, round) {
+  const pontosRonda = PONTOS[chaveRonda(round)] || {};
+  const pontosDe = j => pontosRonda[`${j.jogador}|${j.clube || ""}`];
+  const chaveDe = j => `${j.jogador}|${j.clube || ""}`;
+  const jogadores = ((DATA[round] || {}).jogadores || []).filter(j => j.equipa === equipa);
+
+  const usados = new Set();
+  const linhasTitulares = [];
+  let total = 0;
+
+  for (const pos of POS_ORDER) {
+    const titulares = jogadores.filter(j => j.pos === pos && j.titular)
+      .sort((a,b) => (a.slot ?? 99) - (b.slot ?? 99));
+    const bancoPos = jogadores.filter(j => j.pos === pos && !j.titular)
+      .sort((a,b) => (a.slot ?? 99) - (b.slot ?? 99));
+
+    for (const tit of titulares) {
+      const bruto = pontosDe(tit);
+      if (bruto === undefined) {
+        linhasTitulares.push({ nome: tit.jogador, pontos: null, capitao: tit.capitao });
+        continue;
+      }
+      if (bruto !== "DNP") {
+        const pts = tit.capitao ? bruto * 2 : bruto;
+        total += pts;
+        linhasTitulares.push({ nome: tit.jogador, pontos: pts, capitao: tit.capitao });
+        continue;
+      }
+      let resolvido = false;
+      for (const cand of bancoPos) {
+        if (usados.has(chaveDe(cand))) continue;
+        const candPts = pontosDe(cand);
+        if (candPts === undefined) {
+          linhasTitulares.push({ nome: cand.jogador, pontos: null, capitao: false });
+          usados.add(chaveDe(cand));
+          resolvido = true;
+          break;
+        }
+        if (candPts === "DNP") { usados.add(chaveDe(cand)); continue; }
+        const pts = tit.capitao ? candPts * 2 : candPts;
+        total += pts;
+        linhasTitulares.push({ nome: cand.jogador, pontos: pts, capitao: tit.capitao, substituto: true });
+        usados.add(chaveDe(cand));
+        resolvido = true;
+        break;
+      }
+      if (!resolvido) {
+        total += -1;
+        linhasTitulares.push({ nome: tit.jogador, pontos: -1, capitao: tit.capitao });
+      }
+    }
+  }
+
+  const bancoRestante = jogadores.filter(j => !j.titular && !usados.has(chaveDe(j)))
+    .sort((a,b) => POS_ORDER.indexOf(a.pos) - POS_ORDER.indexOf(b.pos) || (a.slot ?? 99) - (b.slot ?? 99));
+
+  return { linhasTitulares, bancoRestante, total };
 }
 
 function rankingRonda() {
@@ -864,6 +989,76 @@ function renderRanking() {
   });
 }
 
+// Cores fixas por coluna de equipa (decorativas, tipo camisola — não é uma
+// codificação categórica de dados, por isso não segue a paleta do tema).
+const TEAM_COLORS = ["#7FB8E8","#8FD16B","#E8746A","#F27CB0","#F2CB5C","#6FD1C9","#B79CE0","#F2A65C"];
+
+function renderGrelha() {
+  const content = document.getElementById("content");
+  if (!pontosCarregados) {
+    content.innerHTML = `<div class="empty">A carregar pontos…</div>`;
+    return;
+  }
+  const round = state.round;
+  const teamsList = teams();
+  if (!teamsList.length) {
+    content.innerHTML = `<div class="empty">Sem equipas nesta ronda.</div>`;
+    return;
+  }
+
+  const detalhes = {};
+  teamsList.forEach(t => { detalhes[t] = detalheEquipa(t, round); });
+
+  const maxTitulares = Math.max(0, ...teamsList.map(t => detalhes[t].linhasTitulares.length));
+  const maxBanco = Math.max(0, ...teamsList.map(t => detalhes[t].bancoRestante.length));
+  const treinadoresRound = (DATA[round] || {}).treinadores || {};
+  const acumuladoMap = Object.fromEntries(classificacaoGeral().map(g => [g.equipa, g.pontos]));
+  const cel = p => (p === null || p === undefined) ? "" : p;
+
+  let html = `<table class="grid-table"><thead><tr>`;
+  teamsList.forEach((t, i) => {
+    const cor = TEAM_COLORS[i % TEAM_COLORS.length];
+    html += `<th class="grid-team" style="background:${cor}" colspan="2">${t}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  for (let r = 0; r < maxTitulares; r++) {
+    html += `<tr>`;
+    teamsList.forEach(t => {
+      const l = detalhes[t].linhasTitulares[r];
+      html += l
+        ? `<td>${l.nome}${l.capitao ? ` <span class="cap-mark">C</span>` : ""}</td><td class="num">${cel(l.pontos)}</td>`
+        : `<td></td><td></td>`;
+    });
+    html += `</tr>`;
+  }
+
+  html += `<tr class="grid-coach">`;
+  teamsList.forEach(t => { html += `<td>${(treinadoresRound[t] || {}).nome || ""}</td><td></td>`; });
+  html += `</tr>`;
+
+  for (let r = 0; r < maxBanco; r++) {
+    html += `<tr class="grid-bench">`;
+    teamsList.forEach(t => {
+      const b = detalhes[t].bancoRestante[r];
+      html += `<td>${b ? b.jogador : ""}</td><td></td>`;
+    });
+    html += `</tr>`;
+  }
+
+  html += `<tr class="grid-spacer">${teamsList.map(() => `<td></td><td></td>`).join("")}</tr>`;
+  html += `<tr class="grid-total">`;
+  teamsList.forEach(t => { html += `<td>Jornada</td><td class="num">${detalhes[t].total}</td>`; });
+  html += `</tr>`;
+  html += `<tr class="grid-spacer">${teamsList.map(() => `<td></td><td></td>`).join("")}</tr>`;
+  html += `<tr class="grid-total">`;
+  teamsList.forEach(t => { html += `<td>Acumulado</td><td class="num">${acumuladoMap[t] ?? 0}</td>`; });
+  html += `</tr>`;
+
+  html += `</tbody></table>`;
+  content.innerHTML = `<div class="tablewrap">${html}</div>`;
+}
+
 function renderAll() {
   renderRounds();
   renderChips();
@@ -872,6 +1067,7 @@ function renderAll() {
   else if (state.view === "table") renderTable();
   else if (state.view === "formacao") renderFormacao();
   else if (state.view === "ranking") renderRanking();
+  else if (state.view === "grelha") renderGrelha();
   else renderComuns();
 }
 
@@ -880,7 +1076,7 @@ document.getElementById("search").addEventListener("input", e => {
   renderAll();
 });
 
-const VIEW_BUTTONS = { cards: "viewCards", table: "viewTable", comuns: "viewComuns", formacao: "viewFormacao", ranking: "viewRanking" };
+const VIEW_BUTTONS = { cards: "viewCards", table: "viewTable", comuns: "viewComuns", formacao: "viewFormacao", ranking: "viewRanking", grelha: "viewGrelha" };
 function setView(view) {
   state.view = view;
   Object.entries(VIEW_BUTTONS).forEach(([v, id]) =>
@@ -891,6 +1087,7 @@ document.getElementById("viewCards").addEventListener("click", () => setView("ca
 document.getElementById("viewTable").addEventListener("click", () => setView("table"));
 document.getElementById("viewComuns").addEventListener("click", () => setView("comuns"));
 document.getElementById("viewFormacao").addEventListener("click", () => setView("formacao"));
+document.getElementById("viewGrelha").addEventListener("click", () => setView("grelha"));
 document.getElementById("viewRanking").addEventListener("click", () => setView("ranking"));
 
 renderAll();

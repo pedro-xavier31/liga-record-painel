@@ -109,7 +109,7 @@
   }
 
   .prow {
-    display: grid; grid-template-columns: 32px 1fr 90px; align-items: center; gap: 10px;
+    display: grid; grid-template-columns: 32px 1fr 150px; align-items: center; gap: 10px;
     padding: 8px 0; border-top: 1px solid var(--bg-surface-2);
   }
   .prow:first-child { border-top: none; }
@@ -123,12 +123,24 @@
   .pname .n { font-weight: 700; font-size: 13px; }
   .pname .c { color: var(--text-muted); font-size: 11.5px; }
   .pname .owners { color: var(--text-muted); font-size: 10.5px; }
+  .bench-badge {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+    color: var(--text-muted); background: var(--bg-surface-2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; vertical-align: middle;
+  }
+  .pcontrols { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
   .prow input[type="number"] {
     width: 100%; padding: 7px 8px; border-radius: 6px; border: 1px solid var(--border);
     background: var(--bg-page); color: var(--text-1); font-size: 14px; text-align: center;
     font-family: inherit; font-variant-numeric: tabular-nums;
   }
+  .prow input[type="number"]:disabled { opacity: 0.4; }
   .prow input[type="number"].dirty { border-color: var(--accent); background: var(--accent-soft); }
+  .dnp-label {
+    display: flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600;
+    color: var(--text-muted); cursor: pointer; white-space: nowrap;
+  }
+  .dnp-label input { cursor: pointer; }
 
   .savebar { position: sticky; bottom: 0; background: var(--bg-page); padding: 14px 0 4px; margin-top: 6px; }
   .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
@@ -173,16 +185,20 @@ function chaveRonda(round) {
 
 let state = { round: roundKeys()[0], pontos: {} };
 
+// Lista TODOS os jogadores (titulares e suplentes) — os suplentes também
+// precisam de pontuação, porque podem entrar a substituir um titular que
+// não jogou.
 function jogadoresUnicos(round) {
   const jogadores = (DATA[round] || {}).jogadores || [];
   const vistos = new Map();
   for (const j of jogadores) {
-    if (!j.titular) continue;
     const chave = `${j.jogador}|${j.clube || ""}`;
     if (!vistos.has(chave)) {
-      vistos.set(chave, { ...j, equipas: [j.equipa] });
+      vistos.set(chave, { ...j, equipas: [j.equipa], titular: j.titular });
     } else {
-      vistos.get(chave).equipas.push(j.equipa);
+      const existente = vistos.get(chave);
+      existente.equipas.push(j.equipa);
+      existente.titular = existente.titular || j.titular;
     }
   }
   return [...vistos.values()].sort((a,b) =>
@@ -210,15 +226,19 @@ function render() {
   const linhas = jogadores.map(j => {
     const chave = `${j.jogador}|${j.clube || ""}`;
     const valor = pontosRonda[chave];
+    const dnp = valor === "DNP";
     return `
       <div class="prow">
         <span class="pos-tag ${j.pos.toLowerCase()}">${j.pos}</span>
         <div class="pname">
-          <div class="n">${j.jogador}</div>
+          <div class="n">${j.jogador} ${j.titular ? "" : `<span class="bench-badge">banco</span>`}</div>
           <div class="c">${j.clube || ""}</div>
           <div class="owners">${j.equipas.join(", ")}</div>
         </div>
-        <input type="number" step="1" data-chave="${chave}" value="${valor ?? ""}" placeholder="—">
+        <div class="pcontrols">
+          <input type="number" step="1" data-chave="${chave}" value="${dnp ? "" : (valor ?? "")}" placeholder="—" ${dnp ? "disabled" : ""}>
+          <label class="dnp-label"><input type="checkbox" data-dnp="${chave}" ${dnp ? "checked" : ""}> Não jogou</label>
+        </div>
       </div>`;
   }).join("");
 
@@ -242,6 +262,15 @@ function render() {
   el.querySelectorAll('input[type="number"]').forEach(inp => {
     inp.addEventListener("input", () => inp.classList.add("dirty"));
   });
+  el.querySelectorAll('input[type="checkbox"][data-dnp]').forEach(chk => {
+    chk.addEventListener("change", () => {
+      const numInput = el.querySelector(`input[type="number"][data-chave="${CSS.escape(chk.dataset.dnp)}"]`);
+      numInput.disabled = chk.checked;
+      if (chk.checked) numInput.value = "";
+      numInput.classList.add("dirty");
+      chk.closest(".prow").classList.toggle("dirty-row", true);
+    });
+  });
   document.getElementById("btnGravar").onclick = gravar;
 }
 
@@ -251,7 +280,12 @@ async function gravar() {
   const inputs = document.querySelectorAll('#painel input[type="number"]');
   const pontos = {};
   inputs.forEach(inp => {
-    if (inp.value !== "") pontos[inp.dataset.chave] = Number(inp.value);
+    const chk = document.querySelector(`input[type="checkbox"][data-dnp="${CSS.escape(inp.dataset.chave)}"]`);
+    if (chk && chk.checked) {
+      pontos[inp.dataset.chave] = "DNP";
+    } else if (inp.value !== "") {
+      pontos[inp.dataset.chave] = Number(inp.value);
+    }
   });
 
   btn.disabled = true;
