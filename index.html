@@ -192,7 +192,7 @@
   }
   .chip:hover:not([aria-pressed="true"]) { border-color: var(--accent); }
   .viewtoggle {
-    display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; justify-content: flex-end;
+    display: flex; gap: 6px; flex-wrap: wrap;
   }
   .viewtoggle button {
     padding: 7px 13px; border-radius: 999px; border: 1px solid var(--border);
@@ -453,19 +453,9 @@
   <div class="stats" id="stats"></div>
 
   <div class="toolbar">
-    <div class="search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-      <input id="search" type="text" placeholder="Procurar jogador ou clube…" autocomplete="off">
-    </div>
-    <div class="chipgroup" id="teamChips"></div>
-    <div class="chipgroup" id="posChips"></div>
     <div class="viewtoggle">
-      <button id="viewCards" aria-pressed="true">Cartões</button>
-      <button id="viewTable" aria-pressed="false">Tabela</button>
-      <button id="viewComuns" aria-pressed="false">Em comum</button>
-      <button id="viewFormacao" aria-pressed="false">Formação</button>
-      <button id="viewRanking" aria-pressed="false">Classificação</button>
-      <button id="viewGrelha" aria-pressed="false">Jornada (todas)</button>
+      <button id="viewRanking" aria-pressed="true">Classificação</button>
+      <button id="viewGrelha" aria-pressed="false">Jogadores</button>
     </div>
   </div>
 
@@ -488,11 +478,7 @@ function roundKeys() {
 
 let state = {
   round: roundKeys()[0],
-  team: "all",
-  pos: "all",
-  q: "",
-  view: "cards",
-  sort: { col: "equipa", dir: 1 },
+  view: "ranking",
 };
 
 function rows() {
@@ -667,16 +653,6 @@ function teams() {
   return [...new Set(rows().map(r => r.equipa))];
 }
 
-function filtered() {
-  const q = state.q.trim().toLowerCase();
-  return rows().filter(r => {
-    if (state.team !== "all" && r.equipa !== state.team) return false;
-    if (state.pos !== "all" && r.pos !== state.pos) return false;
-    if (q && !(r.jogador.toLowerCase().includes(q) || r.clube.toLowerCase().includes(q))) return false;
-    return true;
-  });
-}
-
 function renderRounds() {
   const el = document.getElementById("rounds");
   el.innerHTML = "";
@@ -690,50 +666,13 @@ function renderRounds() {
   });
 }
 
-function renderChips() {
-  const teamEl = document.getElementById("teamChips");
-  teamEl.innerHTML = "";
-  const allTeams = document.createElement("button");
-  allTeams.className = "chip";
-  allTeams.textContent = "Todas as equipas";
-  allTeams.setAttribute("aria-pressed", state.team === "all");
-  allTeams.onclick = () => { state.team = "all"; renderAll(); };
-  teamEl.appendChild(allTeams);
-  teams().forEach(t => {
-    const b = document.createElement("button");
-    b.className = "chip";
-    b.textContent = t;
-    b.setAttribute("aria-pressed", state.team === t);
-    b.onclick = () => { state.team = t; renderAll(); };
-    teamEl.appendChild(b);
-  });
-
-  const posEl = document.getElementById("posChips");
-  posEl.innerHTML = "";
-  const allPos = document.createElement("button");
-  allPos.className = "chip";
-  allPos.textContent = "Todas as posições";
-  allPos.setAttribute("aria-pressed", state.pos === "all");
-  allPos.onclick = () => { state.pos = "all"; renderAll(); };
-  posEl.appendChild(allPos);
-  const posColors = {GR:"var(--pos-gr)", DEF:"var(--pos-def)", MED:"var(--pos-med)", ATA:"var(--text-1)"};
-  POS_ORDER.forEach(p => {
-    const b = document.createElement("button");
-    b.className = "chip";
-    b.innerHTML = `<span class="dot" style="background:${posColors[p]}"></span>${p}`;
-    b.setAttribute("aria-pressed", state.pos === p);
-    b.onclick = () => { state.pos = p; renderAll(); };
-    posEl.appendChild(b);
-  });
-}
-
 function renderStats() {
-  const f = filtered();
+  const r = rows();
   const nTeams = teams().length;
-  const nPlayers = f.length;
-  const nTitulares = f.filter(r => r.titular).length;
-  const casa = f.filter(r => r.fixture === "casa").length;
-  const fora = f.filter(r => r.fixture === "fora").length;
+  const nPlayers = r.length;
+  const nTitulares = r.filter(x => x.titular).length;
+  const casa = r.filter(x => x.fixture === "casa").length;
+  const fora = r.filter(x => x.fixture === "fora").length;
   const total = casa + fora || 1;
   const el = document.getElementById("stats");
   el.innerHTML = `
@@ -748,217 +687,6 @@ function renderStats() {
   `;
 }
 
-function posTagHTML(pos) {
-  return `<span class="pos-tag ${pos.toLowerCase()}">${pos}</span>`;
-}
-
-function fixtureHTML(fixture) {
-  if (!fixture) return `<span class="fixture none">—</span>`;
-  const label = fixture === "casa" ? "Casa" : "Fora";
-  return `<span class="fixture ${fixture}">${label}</span>`;
-}
-
-function renderCards() {
-  const f = filtered();
-  const content = document.getElementById("content");
-  if (!f.length) {
-    content.innerHTML = `<div class="empty">Nenhum jogador encontrado com estes filtros.</div>`;
-    return;
-  }
-  const byTeam = {};
-  f.forEach(r => { (byTeam[r.equipa] ??= []).push(r); });
-  const treinos = treinadores();
-
-  const cards = Object.entries(byTeam).map(([team, players]) => {
-    const titulares = players.filter(p => p.titular)
-      .sort((a,b) => POS_ORDER.indexOf(a.pos) - POS_ORDER.indexOf(b.pos));
-    const suplentes = players.filter(p => !p.titular)
-      .sort((a,b) => POS_ORDER.indexOf(a.pos) - POS_ORDER.indexOf(b.pos));
-
-    const rowHTML = p => `
-      <div class="player-row ${p.titular ? "" : "bench"}">
-        ${posTagHTML(p.pos)}
-        <div class="pname">
-          <span class="n">${p.jogador}</span>
-          <span class="c">${p.clube}</span>
-        </div>
-        ${p.capitao ? `<span class="cap" title="Capitão">C</span>` : `<span></span>`}
-        ${fixtureHTML(p.fixture)}
-      </div>`;
-
-    let groups = "";
-    let lastPos = null;
-    titulares.forEach(p => {
-      if (p.pos !== lastPos) { groups += `<div class="group-label">${POS_LABEL[p.pos]}</div>`; lastPos = p.pos; }
-      groups += rowHTML(p);
-    });
-    if (suplentes.length) {
-      groups += `<div class="group-label">Suplentes</div>`;
-      suplentes.forEach(p => groups += rowHTML(p));
-    }
-
-    const tr = treinos[team];
-    return `
-      <div class="team-card">
-        <header>
-          <div>
-            <h2>${team}</h2>
-            ${tr ? `<div class="coach">Treinador: ${tr.nome}${tr.clube ? ` · ${tr.clube}` : ""}</div>` : ""}
-          </div>
-          <span class="count">${players.length} jogadores</span>
-        </header>
-        ${groups}
-      </div>`;
-  }).join("");
-
-  content.innerHTML = `<div class="teams">${cards}</div>`;
-}
-
-function renderTable() {
-  const f = [...filtered()];
-  const content = document.getElementById("content");
-  if (!f.length) {
-    content.innerHTML = `<div class="empty">Nenhum jogador encontrado com estes filtros.</div>`;
-    return;
-  }
-  const cols = [
-    {key:"equipa", label:"Equipa"},
-    {key:"pos", label:"Pos"},
-    {key:"jogador", label:"Jogador"},
-    {key:"clube", label:"Clube"},
-    {key:"fixture", label:"Fixture"},
-    {key:"titular", label:"Titular"},
-    {key:"capitao", label:"Cap."},
-  ];
-  const {col, dir} = state.sort;
-  f.sort((a,b) => {
-    let av = a[col], bv = b[col];
-    if (typeof av === "boolean") { av = av ? 1 : 0; bv = bv ? 1 : 0; }
-    else { av = (av ?? "").toString().toLowerCase(); bv = (bv ?? "").toString().toLowerCase(); }
-    if (av < bv) return -1 * dir;
-    if (av > bv) return 1 * dir;
-    return 0;
-  });
-
-  const thead = cols.map(c => {
-    const arrow = state.sort.col === c.key ? (state.sort.dir === 1 ? "&uarr;" : "&darr;") : "";
-    return `<th data-col="${c.key}">${c.label}<span class="arrow">${arrow}</span></th>`;
-  }).join("");
-
-  const tbody = f.map(r => `
-    <tr class="${r.titular ? "" : "bench"}">
-      <td>${r.equipa}</td>
-      <td class="pos">${posTagHTML(r.pos)}</td>
-      <td>${r.jogador}</td>
-      <td>${r.clube}</td>
-      <td>${fixtureHTML(r.fixture)}</td>
-      <td class="tit">${r.titular ? "✓" : "—"}</td>
-      <td class="tit">${r.capitao ? `<span class="cap">C</span>` : "—"}</td>
-    </tr>`).join("");
-
-  content.innerHTML = `
-    <div class="tablewrap">
-      <table>
-        <thead><tr>${thead}</tr></thead>
-        <tbody>${tbody}</tbody>
-      </table>
-    </div>`;
-
-  content.querySelectorAll("thead th").forEach(th => {
-    th.onclick = () => {
-      const key = th.dataset.col;
-      if (state.sort.col === key) state.sort.dir *= -1;
-      else state.sort = { col: key, dir: 1 };
-      renderTable();
-    };
-  });
-}
-
-// Jogadores que pertencem a mais do que uma equipa da liga nesta ronda.
-// Ignora o filtro de equipa na formação dos grupos (um jogador só é "em
-// comum" se aparecer em 2+ equipas); se uma equipa estiver selecionada,
-// mostra só os jogadores partilhados que ela também tem.
-function renderComuns() {
-  const q = state.q.trim().toLowerCase();
-  const groups = {};
-  rows().forEach(r => {
-    if (state.pos !== "all" && r.pos !== state.pos) return;
-    if (q && !(r.jogador.toLowerCase().includes(q) || r.clube.toLowerCase().includes(q))) return;
-    const key = r.jogador + "||" + r.clube;
-    (groups[key] ??= { jogador: r.jogador, clube: r.clube, pos: r.pos, teams: new Set() }).teams.add(r.equipa);
-  });
-
-  let shared = Object.values(groups).filter(g => g.teams.size > 1);
-  if (state.team !== "all") shared = shared.filter(g => g.teams.has(state.team));
-  shared.sort((a,b) => b.teams.size - a.teams.size || a.jogador.localeCompare(b.jogador));
-
-  const content = document.getElementById("content");
-  if (!shared.length) {
-    content.innerHTML = `<div class="empty">Nenhum jogador repetido entre equipas nesta ronda${state.team !== "all" ? ` (para ${state.team})` : ""}.</div>`;
-    return;
-  }
-  const rowsHTML = shared.map(g => `
-    <div class="shared-row">
-      ${posTagHTML(g.pos)}
-      <div class="pname"><span class="n">${g.jogador}</span><span class="c">${g.clube}</span></div>
-      <div class="owner-badges">${[...g.teams].sort().map(t => `<span class="owner-chip">${t}</span>`).join("")}</div>
-      <span class="shared-count">${g.teams.size}×</span>
-    </div>`).join("");
-  content.innerHTML = `<div class="tablewrap">${rowsHTML}</div>`;
-}
-
-// Titulares de UMA equipa, desenhados no relvado na posição real (ordenados
-// por "slot" — o índice esquerda→direita que o site guarda por jogador).
-let formTeam = null;
-
-function playerTokenHTML(p) {
-  const fix = p.fixture ? `<span class="pfix ${p.fixture}">${p.fixture === "casa" ? "C" : "F"}</span>` : "";
-  return `
-    <div class="pitch-player" title="${p.jogador} — ${p.clube}">
-      <div class="shirt ${p.pos.toLowerCase()}">${p.capitao ? `<span class="shirt-cap">C</span>` : ""}</div>
-      <div class="ptag">${p.jogador}</div>
-      <div class="pclub"><span>${p.clube}</span>${fix}</div>
-    </div>`;
-}
-
-function renderFormacao() {
-  const content = document.getElementById("content");
-  const allTeams = teams();
-  if (!allTeams.length) {
-    content.innerHTML = `<div class="empty">Sem dados para esta ronda.</div>`;
-    return;
-  }
-  if (!formTeam || !allTeams.includes(formTeam)) formTeam = allTeams[0];
-
-  const tabs = allTeams.map(t =>
-    `<button class="form-tab" data-team="${t}" aria-pressed="${t === formTeam}">${t}</button>`).join("");
-
-  const titulares = rows().filter(r => r.equipa === formTeam && r.titular);
-  const porPosicao = pos => titulares.filter(p => p.pos === pos)
-    .sort((a,b) => (a.slot ?? 99) - (b.slot ?? 99));
-  const linhaHTML = pos => `<div class="pitch-row">${porPosicao(pos).map(playerTokenHTML).join("")}</div>`;
-
-  const tr = treinadores()[formTeam];
-
-  content.innerHTML = `
-    <div class="form-tabs">${tabs}</div>
-    <div class="pitch-wrap">
-      ${tr ? `<div class="pitch-coach">Treinador: ${tr.nome}${tr.clube ? ` · ${tr.clube}` : ""}</div>` : ""}
-      <div class="pitch">
-        <div class="pitch-mark circle"></div>
-        <div class="pitch-mark halfway"></div>
-        <div class="pitch-mark box"></div>
-        ${linhaHTML("ATA")}
-        ${linhaHTML("MED")}
-        ${linhaHTML("DEF")}
-        ${linhaHTML("GR")}
-      </div>
-    </div>`;
-
-  content.querySelectorAll(".form-tab").forEach(b => {
-    b.onclick = () => { formTeam = b.dataset.team; renderFormacao(); };
-  });
-}
 
 function rankTableHTML(items, { medal = false } = {}) {
   return items.map((it, i) => `
@@ -1078,32 +806,18 @@ function renderGrelha() {
 
 function renderAll() {
   renderRounds();
-  renderChips();
   renderStats();
-  if (state.view === "cards") renderCards();
-  else if (state.view === "table") renderTable();
-  else if (state.view === "formacao") renderFormacao();
-  else if (state.view === "ranking") renderRanking();
-  else if (state.view === "grelha") renderGrelha();
-  else renderComuns();
+  if (state.view === "grelha") renderGrelha();
+  else renderRanking();
 }
 
-document.getElementById("search").addEventListener("input", e => {
-  state.q = e.target.value;
-  renderAll();
-});
-
-const VIEW_BUTTONS = { cards: "viewCards", table: "viewTable", comuns: "viewComuns", formacao: "viewFormacao", ranking: "viewRanking", grelha: "viewGrelha" };
+const VIEW_BUTTONS = { ranking: "viewRanking", grelha: "viewGrelha" };
 function setView(view) {
   state.view = view;
   Object.entries(VIEW_BUTTONS).forEach(([v, id]) =>
     document.getElementById(id).setAttribute("aria-pressed", String(v === view)));
   renderAll();
 }
-document.getElementById("viewCards").addEventListener("click", () => setView("cards"));
-document.getElementById("viewTable").addEventListener("click", () => setView("table"));
-document.getElementById("viewComuns").addEventListener("click", () => setView("comuns"));
-document.getElementById("viewFormacao").addEventListener("click", () => setView("formacao"));
 document.getElementById("viewGrelha").addEventListener("click", () => setView("grelha"));
 document.getElementById("viewRanking").addEventListener("click", () => setView("ranking"));
 
