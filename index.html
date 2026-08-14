@@ -369,7 +369,8 @@
   }
 
   /* ── Vista "Classificação" ──────────────────────── */
-  .rank-refresh { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .rank-refresh { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .live-updated { font-size: 11.5px; color: var(--text-muted); font-weight: 600; }
   .rank-refresh button {
     padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
     background: var(--bg-surface); color: var(--text-2); font-size: 11.5px; font-weight: 700;
@@ -495,11 +496,13 @@ function treinadores() {
 const WORKER_URL = "https://liga-record-pontos.newideas.workers.dev";
 let PONTOS = {};       // {"R2": {"Nome|Clube": pontos, ...}, ...}
 let pontosCarregados = false;
+let ultimaAtualizacao = "—";
 
 async function fetchPontos() {
   try {
     const resp = await fetch(`${WORKER_URL}/pontos`);
     PONTOS = await resp.json();
+    ultimaAtualizacao = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
   } catch (e) {
     PONTOS = {};
   }
@@ -713,7 +716,10 @@ function renderRanking() {
   const pendentes = pendentesRonda();
 
   content.innerHTML = `
-    <div class="rank-refresh"><button id="btnRefreshPontos">🔄 Atualizar pontos</button></div>
+    <div class="rank-refresh">
+      <span class="live-updated">Atualizado às ${ultimaAtualizacao}</span>
+      <button id="btnRefreshPontos">🔄 Atualizar pontos</button>
+    </div>
     ${pendentes > 0 ? `<div class="pending-note">⚠ ${state.round}: falta pontuação de ${pendentes} jogador${pendentes === 1 ? "" : "es"} — os totais abaixo ainda não são finais.</div>` : ""}
     ${geral.length ? `
       <div class="rank-section">
@@ -801,7 +807,18 @@ function renderGrelha() {
   html += `</tr>`;
 
   html += `</tbody></table>`;
-  content.innerHTML = `<div class="tablewrap">${html}</div>`;
+  content.innerHTML = `
+    <div class="rank-refresh">
+      <span class="live-updated">Atualizado às ${ultimaAtualizacao}</span>
+      <button id="btnRefreshGrelha">🔄 Atualizar pontos</button>
+    </div>
+    <div class="tablewrap">${html}</div>`;
+
+  document.getElementById("btnRefreshGrelha").addEventListener("click", async (e) => {
+    e.target.textContent = "A atualizar…";
+    await fetchPontos();
+    renderGrelha();
+  });
 }
 
 function renderAll() {
@@ -822,7 +839,17 @@ document.getElementById("viewGrelha").addEventListener("click", () => setView("g
 document.getElementById("viewRanking").addEventListener("click", () => setView("ranking"));
 
 renderAll();
-fetchPontos().then(() => { if (state.view === "ranking") renderRanking(); });
+
+// Como os pontos vão sendo inseridos ao longo da jornada, o painel
+// atualiza-se sozinho enquanto a página estiver aberta — sem precisar de
+// refresh manual (o botão "Atualizar pontos" continua a servir para forçar).
+async function atualizarPontosEVista() {
+  await fetchPontos();
+  if (state.view === "grelha") renderGrelha();
+  else if (state.view === "ranking") renderRanking();
+}
+atualizarPontosEVista();
+setInterval(atualizarPontosEVista, 30000);
 </script>
 </body>
 </html>

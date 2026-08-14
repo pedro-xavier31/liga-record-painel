@@ -97,6 +97,11 @@
   }
 
   .toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .club-select {
+    padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-surface); color: var(--text-1); font-size: 13px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+  }
   .rounds { display: flex; gap: 6px; }
   .round-tab {
     padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
@@ -183,7 +188,7 @@ function chaveRonda(round) {
   return "R" + (m ? m[0] : "");
 }
 
-let state = { round: roundKeys()[0], pontos: {} };
+let state = { round: roundKeys()[0], pontos: {}, clube: "all" };
 
 // Lista TODOS os jogadores (titulares e suplentes) — os suplentes também
 // precisam de pontuação, porque podem entrar a substituir um titular que
@@ -216,12 +221,19 @@ async function carregarPontos() {
 
 function render() {
   const el = document.getElementById("painel");
-  const jogadores = jogadoresUnicos(state.round);
+  const todosJogadores = jogadoresUnicos(state.round);
   const pontosRonda = state.pontos[chaveRonda(state.round)] || {};
-  const pendentes = jogadores.filter(j => pontosRonda[`${j.jogador}|${j.clube || ""}`] === undefined).length;
+  const pendentes = todosJogadores.filter(j => pontosRonda[`${j.jogador}|${j.clube || ""}`] === undefined).length;
+
+  const clubes = [...new Set(todosJogadores.map(j => j.clube).filter(Boolean))].sort();
+  if (!clubes.includes(state.clube)) state.clube = "all";
+  const jogadores = state.clube === "all" ? todosJogadores : todosJogadores.filter(j => j.clube === state.clube);
 
   const tabs = roundKeys().map(r =>
     `<button class="round-tab" data-round="${r}" aria-pressed="${r === state.round}">${r}</button>`).join("");
+  const opcoesClube = [`<option value="all">Todos os clubes</option>`]
+    .concat(clubes.map(c => `<option value="${c}" ${c === state.clube ? "selected" : ""}>${c}</option>`))
+    .join("");
 
   const linhas = jogadores.map(j => {
     const chave = `${j.jogador}|${j.clube || ""}`;
@@ -247,8 +259,11 @@ function render() {
       <div class="rounds">${tabs}</div>
       <span class="pending-pill">${pendentes === 0 ? "✓ tudo preenchido" : `${pendentes} por preencher`}</span>
     </div>
+    <div class="toprow">
+      <select id="filtroClube" class="club-select">${opcoesClube}</select>
+    </div>
     <div class="card">
-      ${jogadores.length ? linhas : `<div class="empty">Sem jogadores nesta ronda.</div>`}
+      ${jogadores.length ? linhas : `<div class="empty">Sem jogadores deste clube nesta ronda.</div>`}
       <div class="savebar">
         <div id="saveMsg"></div>
         <button class="primary" id="btnGravar">Gravar pontos</button>
@@ -258,6 +273,10 @@ function render() {
 
   el.querySelectorAll(".round-tab").forEach(b => {
     b.onclick = () => { state.round = b.dataset.round; render(); };
+  });
+  document.getElementById("filtroClube").addEventListener("change", e => {
+    state.clube = e.target.value;
+    render();
   });
   el.querySelectorAll('input[type="number"]').forEach(inp => {
     inp.addEventListener("input", () => inp.classList.add("dirty"));
