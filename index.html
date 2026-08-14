@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Liga Record</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg-page:      #F2F5F1;
+    --bg-surface:   #FFFFFF;
+    --bg-surface-2: #EAF0EC;
+    --border:       #D6E0D9;
+    --text-1:       #12211A;
+    --text-2:       #4B5C52;
+    --text-muted:   #7C8B81;
+    --accent:       #1B6B3A;
+    --accent-strong:#0F4A28;
+    --accent-soft:  #E3F0E7;
+    --pos-gr:       #2a78d6;
+    --pos-gr-bg:    #E4EEFB;
+    --pos-def:      #eb6834;
+    --pos-def-bg:   #FBE7DD;
+    --pos-med:      #1baf7a;
+    --pos-med-bg:   #DEF3EA;
+    --pos-ata-bg:   #ECEDE9;
+    --pos-ata-brd:  #B9C2BB;
+    --home-bg:      #E3F0E7;
+    --home-brd:     #BBD8C4;
+    --shadow:       0 1px 2px rgba(18,33,26,0.06), 0 8px 24px -12px rgba(18,33,26,0.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg-page:      #0D1712;
+      --bg-surface:   #16221B;
+      --bg-surface-2: #1D2B22;
+      --border:       #2A3A2F;
+      --text-1:       #EDF3EE;
+      --text-2:       #B7C4BB;
+      --text-muted:   #7E9186;
+      --accent:       #45C97C;
+      --accent-strong:#6EDBA0;
+      --accent-soft:  rgba(69,201,124,0.14);
+      --pos-gr:       #3987e5;
+      --pos-gr-bg:    rgba(57,135,229,0.16);
+      --pos-def:      #d95926;
+      --pos-def-bg:   rgba(217,89,38,0.18);
+      --pos-med:      #199e70;
+      --pos-med-bg:   rgba(25,158,112,0.18);
+      --pos-ata-bg:   #212E25;
+      --pos-ata-brd:  #3B4B41;
+      --home-bg:      rgba(69,201,124,0.14);
+      --home-brd:     rgba(69,201,124,0.35);
+      --shadow:       0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg-page:      #0D1712;
+    --bg-surface:   #16221B;
+    --bg-surface-2: #1D2B22;
+    --border:       #2A3A2F;
+    --text-1:       #EDF3EE;
+    --text-2:       #B7C4BB;
+    --text-muted:   #7E9186;
+    --accent:       #45C97C;
+    --accent-strong:#6EDBA0;
+    --accent-soft:  rgba(69,201,124,0.14);
+    --pos-gr:       #3987e5;
+    --pos-gr-bg:    rgba(57,135,229,0.16);
+    --pos-def:      #d95926;
+    --pos-def-bg:   rgba(217,89,38,0.18);
+    --pos-med:      #199e70;
+    --pos-med-bg:   rgba(25,158,112,0.18);
+    --pos-ata-bg:   #212E25;
+    --pos-ata-brd:  #3B4B41;
+    --home-bg:      rgba(69,201,124,0.14);
+    --home-brd:     rgba(69,201,124,0.35);
+    --shadow:       0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg-page);
+    color: var(--text-1);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 20px 64px; }
+
+  /* ── Header ─────────────────────────────────────── */
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+    padding-bottom: 18px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .wordmark { display: flex; align-items: baseline; gap: 10px; }
+  .wordmark .mark {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; letter-spacing: -0.02em;
+    flex-shrink: 0;
+  }
+  .wordmark h1 {
+    margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.02em;
+    text-transform: uppercase; color: var(--text-1);
+  }
+  .wordmark .sub {
+    font-size: 12.5px; color: var(--text-muted); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .rounds { display: flex; gap: 6px; }
+  .round-tab {
+    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--bg-surface); color: var(--text-2);
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em;
+    cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+  }
+  .round-tab[aria-pressed="true"] {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+  .round-tab:hover:not([aria-pressed="true"]) { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Stat tiles ─────────────────────────────────── */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px; margin-bottom: 18px;
+  }
+  .stat {
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat .n {
+    font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em; color: var(--text-1);
+  }
+  .stat .l {
+    font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.06em; font-weight: 700; margin-top: 2px;
+  }
+  .stat .split {
+    display: flex; height: 6px; border-radius: 3px; overflow: hidden;
+    margin-top: 8px; background: var(--bg-surface-2);
+  }
+  .stat .split span:first-child { background: var(--accent); }
+  .stat .split span:last-child { background: var(--border); }
+
+  /* ── Toolbar ────────────────────────────────────── */
+  .toolbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .search {
+    position: relative; flex: 1 1 220px; min-width: 180px;
+  }
+  .search input {
+    width: 100%; padding: 9px 12px 9px 32px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg-surface);
+    color: var(--text-1); font-size: 13.5px; font-family: inherit;
+  }
+  .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); opacity: .55; }
+  .chipgroup { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--bg-surface); color: var(--text-2);
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .chip[aria-pressed="true"] {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong);
+  }
+  .chip:hover:not([aria-pressed="true"]) { border-color: var(--accent); }
+  .viewtoggle {
+    display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    margin-left: auto;
+  }
+  .viewtoggle button {
+    padding: 8px 14px; border: none; background: var(--bg-surface); color: var(--text-2);
+    font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .viewtoggle button + button { border-left: 1px solid var(--border); }
+  .viewtoggle button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  /* ── Cards view ─────────────────────────────────── */
+  .teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 14px; }
+  .team-card {
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .team-card header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-surface-2);
+  }
+  .team-card header h2 { margin: 0; font-size: 14.5px; font-weight: 800; }
+  .team-card header .coach { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+  .team-card header .count { font-size: 11.5px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+  .group-label {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted); padding: 10px 16px 4px;
+  }
+  .player-row {
+    display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center;
+    gap: 10px; padding: 7px 16px; border-top: 1px solid var(--bg-surface-2);
+  }
+  .player-row:first-of-type { border-top: none; }
+  .player-row.bench { opacity: 0.62; }
+  .pos-tag {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.02em;
+    padding: 3px 0; border-radius: 5px; text-align: center;
+    border: 1px solid transparent;
+  }
+  .pos-tag.gr  { background: var(--pos-gr-bg);  color: var(--pos-gr); }
+  .pos-tag.def { background: var(--pos-def-bg); color: var(--pos-def); }
+  .pos-tag.med { background: var(--pos-med-bg); color: var(--pos-med); }
+  .pos-tag.ata { background: var(--pos-ata-bg); color: var(--text-1); border-color: var(--pos-ata-brd); }
+  .pname { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .pname .n { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pname .c { color: var(--text-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cap {
+    width: 16px; height: 16px; border-radius: 50%; background: var(--accent); color: #fff;
+    font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .fixture {
+    font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    white-space: nowrap; border: 1px solid var(--border); color: var(--text-2);
+  }
+  .fixture.casa { background: var(--home-bg); border-color: var(--home-brd); color: var(--accent-strong); }
+  .fixture.none { visibility: hidden; }
+
+  /* ── Table view ─────────────────────────────────── */
+  .tablewrap {
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px;
+    overflow-x: auto; box-shadow: var(--shadow);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    position: sticky; top: 0; background: var(--bg-surface-2);
+    text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
+    border-bottom: 1px solid var(--border); cursor: pointer; white-space: nowrap;
+  }
+  thead th:hover { color: var(--accent); }
+  thead th .arrow { margin-left: 3px; opacity: .5; }
+  tbody td { padding: 8px 14px; border-bottom: 1px solid var(--bg-surface-2); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--bg-surface-2); }
+  tbody tr.bench { color: var(--text-muted); }
+  td.pos { width: 1%; }
+  td.tit { text-align: center; }
+
+  /* ── Vista "Formação" ───────────────────────────── */
+  .form-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .form-tab {
+    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--bg-surface); color: var(--text-2);
+    font-size: 12.5px; font-weight: 700; cursor: pointer;
+  }
+  .form-tab[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pitch-wrap {
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; box-shadow: var(--shadow);
+  }
+  .pitch-coach {
+    font-size: 12px; font-weight: 700; color: var(--text-2); margin-bottom: 12px; text-align: center;
+  }
+  /* O relvado usa cores fixas (não segue o tema) — representa um campo real. */
+  .pitch {
+    position: relative; overflow: hidden;
+    background:
+      repeating-linear-gradient(180deg, #2c8a4c 0px, #2c8a4c 42px, #32914f 42px, #32914f 84px);
+    border: 2px solid rgba(255,255,255,0.55); border-radius: 10px;
+    min-height: 460px; padding: 22px 14px 16px;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 6px;
+  }
+  .pitch-mark { position: absolute; border-color: rgba(255,255,255,0.5); pointer-events: none; }
+  .pitch-mark.halfway { left: 6%; right: 6%; top: 50%; height: 2px; background: rgba(255,255,255,0.5); }
+  .pitch-mark.circle {
+    left: 50%; top: 50%; width: 92px; height: 92px; margin: -46px 0 0 -46px;
+    border: 2px solid rgba(255,255,255,0.5); border-radius: 50%;
+  }
+  .pitch-mark.box {
+    left: 32%; right: 32%; bottom: 0; height: 62px;
+    border: 2px solid rgba(255,255,255,0.5); border-bottom: none; border-radius: 6px 6px 0 0;
+  }
+  .pitch-row { display: flex; justify-content: space-evenly; align-items: center; position: relative; z-index: 1; flex: 1; }
+  .pitch-player { display: flex; flex-direction: column; align-items: center; gap: 3px; max-width: 92px; }
+  .shirt {
+    width: 34px; height: 34px; border-radius: 8px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,0.85); box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  }
+  .shirt.gr  { background: #2a78d6; }
+  .shirt.def { background: #eb6834; }
+  .shirt.med { background: #1baf7a; }
+  .shirt.ata { background: #33332f; }
+  .shirt-cap {
+    position: absolute; top: -7px; right: -7px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; color: #0F4A28; font-size: 9px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.15);
+  }
+  .ptag {
+    font-size: 11px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+    text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;
+  }
+  .pclub {
+    font-size: 9.5px; color: rgba(255,255,255,0.9); text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;
+    display: flex; align-items: center; gap: 3px; justify-content: center;
+  }
+  .pfix {
+    font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px;
+    background: rgba(255,255,255,0.22); flex-shrink: 0;
+  }
+  .pfix.casa { background: rgba(255,255,255,0.4); }
+
+  /* ── Vista "Em comum" ───────────────────────────── */
+  .shared-row {
+    display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center;
+    gap: 10px; padding: 9px 16px; border-top: 1px solid var(--bg-surface-2);
+  }
+  .shared-row:first-child { border-top: none; }
+  .owner-badges { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+  .owner-chip {
+    font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    background: var(--bg-surface-2); border: 1px solid var(--border); color: var(--text-2);
+    white-space: nowrap;
+  }
+  .shared-count {
+    font-size: 12px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums;
+    min-width: 24px; text-align: right;
+  }
+
+  .empty {
+    text-align: center; padding: 48px 20px; color: var(--text-muted);
+    background: var(--bg-surface); border: 1px dashed var(--border); border-radius: 12px;
+  }
+
+  footer.note {
+    margin-top: 28px; text-align: center; font-size: 11.5px; color: var(--text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .player-row { grid-template-columns: 30px 1fr auto; }
+    .fixture { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="wordmark">
+      <div class="mark">LR</div>
+      <div>
+        <h1>Liga Record</h1>
+        <div class="sub">Painel de equipas</div>
+      </div>
+    </div>
+    <div class="rounds" id="rounds"></div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search" type="text" placeholder="Procurar jogador ou clube…" autocomplete="off">
+    </div>
+    <div class="chipgroup" id="teamChips"></div>
+    <div class="chipgroup" id="posChips"></div>
+    <div class="viewtoggle">
+      <button id="viewCards" aria-pressed="true">Cartões</button>
+      <button id="viewTable" aria-pressed="false">Tabela</button>
+      <button id="viewComuns" aria-pressed="false">Em comum</button>
+      <button id="viewFormacao" aria-pressed="false">Formação</button>
+    </div>
+  </div>
+
+  <div id="content"></div>
+
+  <footer class="note">Liga Record — extraído automaticamente. Dados referentes à ronda selecionada.</footer>
+</div>
+
+<script>
+const DATA = {"Ronda 2": {"jogadores": [{"equipa": "David Xavier", "pos": "GR", "jogador": "SAMUEL SOARES", "clube": "Benfica", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "GR", "jogador": "CHARLES", "clube": "V. Guimarães", "fixture": null, "titular": false, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "DEF", "jogador": "DAHL", "clube": "Benfica", "fixture": "fora", "titular": true, "capitao": false, "slot": 2}, {"equipa": "David Xavier", "pos": "DEF", "jogador": "EDUARDO QUARESMA", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 1}, {"equipa": "David Xavier", "pos": "DEF", "jogador": "MARTIM FERNANDES", "clube": "FC Porto", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "DEF", "jogador": "ADRIAN BAJRAMI", "clube": "Sp. Braga", "fixture": null, "titular": false, "capitao": false, "slot": 1}, {"equipa": "David Xavier", "pos": "MED", "jogador": "RAPHAEL GUZZO", "clube": "Marítimo", "fixture": "fora", "titular": true, "capitao": false, "slot": 3}, {"equipa": "David Xavier", "pos": "MED", "jogador": "ZALAZAR", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 2}, {"equipa": "David Xavier", "pos": "MED", "jogador": "FROHOLDT", "clube": "FC Porto", "fixture": "fora", "titular": true, "capitao": false, "slot": 1}, {"equipa": "David Xavier", "pos": "MED", "jogador": "CÁSERES", "clube": "Gil Vicente", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "MED", "jogador": "NILE JOHN", "clube": "Moreirense", "fixture": null, "titular": false, "capitao": false, "slot": 2}, {"equipa": "David Xavier", "pos": "ATA", "jogador": "IOANNIDIS", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": true, "slot": 2}, {"equipa": "David Xavier", "pos": "ATA", "jogador": "JHON DURÁN", "clube": "Benfica", "fixture": "fora", "titular": true, "capitao": false, "slot": 1}, {"equipa": "David Xavier", "pos": "ATA", "jogador": "BEGRAOUI", "clube": "Estoril", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "ATA", "jogador": "HÉCTOR HERNÁNDEZ", "clube": "Gil Vicente", "fixture": null, "titular": false, "capitao": false, "slot": 3}, {"equipa": "Equipa 2", "pos": "GR", "jogador": "DIOGO COSTA", "clube": "FC Porto", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "GR", "jogador": "BERNARDO FONTES", "clube": "Sp. Braga", "fixture": null, "titular": false, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "DEF", "jogador": "ELIMBI", "clube": "Gil Vicente", "fixture": "fora", "titular": true, "capitao": false, "slot": 2}, {"equipa": "Equipa 2", "pos": "DEF", "jogador": "MAXI ARAÚJO", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 1}, {"equipa": "Equipa 2", "pos": "DEF", "jogador": "LAGERBIELKE", "clube": "Sp. Braga", "fixture": "casa", "titular": true, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "MED", "jogador": "ISSA DOUMBIA", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 3}, {"equipa": "Equipa 2", "pos": "MED", "jogador": "FUKUI", "clube": "Arouca", "fixture": "casa", "titular": true, "capitao": false, "slot": 2}, {"equipa": "Equipa 2", "pos": "MED", "jogador": "BENI", "clube": "V. Guimarães", "fixture": "fora", "titular": true, "capitao": false, "slot": 1}, {"equipa": "Equipa 2", "pos": "MED", "jogador": "HOLSGROVE", "clube": "Estoril", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "ATA", "jogador": "FLÁVIO GONÇALVES", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 2}, {"equipa": "Equipa 2", "pos": "ATA", "jogador": "PAU VICTOR", "clube": "Sp. Braga", "fixture": "casa", "titular": true, "capitao": false, "slot": 1}, {"equipa": "Equipa 2", "pos": "ATA", "jogador": "PAVLIDIS", "clube": "Benfica", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "ATA", "jogador": "LUÍS GUILHERME", "clube": "Sporting", "fixture": null, "titular": false, "capitao": false, "slot": 3}], "treinadores": {"David Xavier": {"nome": "Rui Borges", "clube": "Sporting"}, "Equipa 2": {"nome": "Rui Borges", "clube": "Sporting"}}}};
+
+const POS_ORDER = ["GR","DEF","MED","ATA"];
+const POS_LABEL = {GR:"Guarda-Redes", DEF:"Defesas", MED:"Médios", ATA:"Avançados"};
+
+let state = {
+  round: Object.keys(DATA)[0],
+  team: "all",
+  pos: "all",
+  q: "",
+  view: "cards",
+  sort: { col: "equipa", dir: 1 },
+};
+
+function rows() {
+  return (DATA[state.round] || {}).jogadores || [];
+}
+
+function treinadores() {
+  return (DATA[state.round] || {}).treinadores || {};
+}
+
+function teams() {
+  return [...new Set(rows().map(r => r.equipa))];
+}
+
+function filtered() {
+  const q = state.q.trim().toLowerCase();
+  return rows().filter(r => {
+    if (state.team !== "all" && r.equipa !== state.team) return false;
+    if (state.pos !== "all" && r.pos !== state.pos) return false;
+    if (q && !(r.jogador.toLowerCase().includes(q) || r.clube.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function renderRounds() {
+  const el = document.getElementById("rounds");
+  el.innerHTML = "";
+  Object.keys(DATA).forEach(r => {
+    const b = document.createElement("button");
+    b.className = "round-tab";
+    b.textContent = r;
+    b.setAttribute("aria-pressed", r === state.round);
+    b.onclick = () => { state.round = r; renderAll(); };
+    el.appendChild(b);
+  });
+}
+
+function renderChips() {
+  const teamEl = document.getElementById("teamChips");
+  teamEl.innerHTML = "";
+  const allTeams = document.createElement("button");
+  allTeams.className = "chip";
+  allTeams.textContent = "Todas as equipas";
+  allTeams.setAttribute("aria-pressed", state.team === "all");
+  allTeams.onclick = () => { state.team = "all"; renderAll(); };
+  teamEl.appendChild(allTeams);
+  teams().forEach(t => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = t;
+    b.setAttribute("aria-pressed", state.team === t);
+    b.onclick = () => { state.team = t; renderAll(); };
+    teamEl.appendChild(b);
+  });
+
+  const posEl = document.getElementById("posChips");
+  posEl.innerHTML = "";
+  const allPos = document.createElement("button");
+  allPos.className = "chip";
+  allPos.textContent = "Todas as posições";
+  allPos.setAttribute("aria-pressed", state.pos === "all");
+  allPos.onclick = () => { state.pos = "all"; renderAll(); };
+  posEl.appendChild(allPos);
+  const posColors = {GR:"var(--pos-gr)", DEF:"var(--pos-def)", MED:"var(--pos-med)", ATA:"var(--text-1)"};
+  POS_ORDER.forEach(p => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.innerHTML = `<span class="dot" style="background:${posColors[p]}"></span>${p}`;
+    b.setAttribute("aria-pressed", state.pos === p);
+    b.onclick = () => { state.pos = p; renderAll(); };
+    posEl.appendChild(b);
+  });
+}
+
+function renderStats() {
+  const f = filtered();
+  const nTeams = teams().length;
+  const nPlayers = f.length;
+  const nTitulares = f.filter(r => r.titular).length;
+  const casa = f.filter(r => r.fixture === "casa").length;
+  const fora = f.filter(r => r.fixture === "fora").length;
+  const total = casa + fora || 1;
+  const el = document.getElementById("stats");
+  el.innerHTML = `
+    <div class="stat"><div class="n">${nTeams}</div><div class="l">Equipas</div></div>
+    <div class="stat"><div class="n">${nPlayers}</div><div class="l">Jogadores</div></div>
+    <div class="stat"><div class="n">${nTitulares}</div><div class="l">Titulares</div></div>
+    <div class="stat">
+      <div class="n">${casa}<span style="color:var(--text-muted);font-weight:600;">&nbsp;/&nbsp;${fora}</span></div>
+      <div class="l">Em casa / Fora</div>
+      <div class="split"><span style="width:${100*casa/total}%"></span><span style="width:${100*fora/total}%"></span></div>
+    </div>
+  `;
+}
+
+function posTagHTML(pos) {
+  return `<span class="pos-tag ${pos.toLowerCase()}">${pos}</span>`;
+}
+
+function fixtureHTML(fixture) {
+  if (!fixture) return `<span class="fixture none">—</span>`;
+  const label = fixture === "casa" ? "Casa" : "Fora";
+  return `<span class="fixture ${fixture}">${label}</span>`;
+}
+
+function renderCards() {
+  const f = filtered();
+  const content = document.getElementById("content");
+  if (!f.length) {
+    content.innerHTML = `<div class="empty">Nenhum jogador encontrado com estes filtros.</div>`;
+    return;
+  }
+  const byTeam = {};
+  f.forEach(r => { (byTeam[r.equipa] ??= []).push(r); });
+  const treinos = treinadores();
+
+  const cards = Object.entries(byTeam).map(([team, players]) => {
+    const titulares = players.filter(p => p.titular)
+      .sort((a,b) => POS_ORDER.indexOf(a.pos) - POS_ORDER.indexOf(b.pos));
+    const suplentes = players.filter(p => !p.titular)
+      .sort((a,b) => POS_ORDER.indexOf(a.pos) - POS_ORDER.indexOf(b.pos));
+
+    const rowHTML = p => `
+      <div class="player-row ${p.titular ? "" : "bench"}">
+        ${posTagHTML(p.pos)}
+        <div class="pname">
+          <span class="n">${p.jogador}</span>
+          <span class="c">${p.clube}</span>
+        </div>
+        ${p.capitao ? `<span class="cap" title="Capitão">C</span>` : `<span></span>`}
+        ${fixtureHTML(p.fixture)}
+      </div>`;
+
+    let groups = "";
+    let lastPos = null;
+    titulares.forEach(p => {
+      if (p.pos !== lastPos) { groups += `<div class="group-label">${POS_LABEL[p.pos]}</div>`; lastPos = p.pos; }
+      groups += rowHTML(p);
+    });
+    if (suplentes.length) {
+      groups += `<div class="group-label">Suplentes</div>`;
+      suplentes.forEach(p => groups += rowHTML(p));
+    }
+
+    const tr = treinos[team];
+    return `
+      <div class="team-card">
+        <header>
+          <div>
+            <h2>${team}</h2>
+            ${tr ? `<div class="coach">Treinador: ${tr.nome}${tr.clube ? ` · ${tr.clube}` : ""}</div>` : ""}
+          </div>
+          <span class="count">${players.length} jogadores</span>
+        </header>
+        ${groups}
+      </div>`;
+  }).join("");
+
+  content.innerHTML = `<div class="teams">${cards}</div>`;
+}
+
+function renderTable() {
+  const f = [...filtered()];
+  const content = document.getElementById("content");
+  if (!f.length) {
+    content.innerHTML = `<div class="empty">Nenhum jogador encontrado com estes filtros.</div>`;
+    return;
+  }
+  const cols = [
+    {key:"equipa", label:"Equipa"},
+    {key:"pos", label:"Pos"},
+    {key:"jogador", label:"Jogador"},
+    {key:"clube", label:"Clube"},
+    {key:"fixture", label:"Fixture"},
+    {key:"titular", label:"Titular"},
+    {key:"capitao", label:"Cap."},
+  ];
+  const {col, dir} = state.sort;
+  f.sort((a,b) => {
+    let av = a[col], bv = b[col];
+    if (typeof av === "boolean") { av = av ? 1 : 0; bv = bv ? 1 : 0; }
+    else { av = (av ?? "").toString().toLowerCase(); bv = (bv ?? "").toString().toLowerCase(); }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+
+  const thead = cols.map(c => {
+    const arrow = state.sort.col === c.key ? (state.sort.dir === 1 ? "&uarr;" : "&darr;") : "";
+    return `<th data-col="${c.key}">${c.label}<span class="arrow">${arrow}</span></th>`;
+  }).join("");
+
+  const tbody = f.map(r => `
+    <tr class="${r.titular ? "" : "bench"}">
+      <td>${r.equipa}</td>
+      <td class="pos">${posTagHTML(r.pos)}</td>
+      <td>${r.jogador}</td>
+      <td>${r.clube}</td>
+      <td>${fixtureHTML(r.fixture)}</td>
+      <td class="tit">${r.titular ? "✓" : "—"}</td>
+      <td class="tit">${r.capitao ? `<span class="cap">C</span>` : "—"}</td>
+    </tr>`).join("");
+
+  content.innerHTML = `
+    <div class="tablewrap">
+      <table>
+        <thead><tr>${thead}</tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>
+    </div>`;
+
+  content.querySelectorAll("thead th").forEach(th => {
+    th.onclick = () => {
+      const key = th.dataset.col;
+      if (state.sort.col === key) state.sort.dir *= -1;
+      else state.sort = { col: key, dir: 1 };
+      renderTable();
+    };
+  });
+}
+
+// Jogadores que pertencem a mais do que uma equipa da liga nesta ronda.
+// Ignora o filtro de equipa na formação dos grupos (um jogador só é "em
+// comum" se aparecer em 2+ equipas); se uma equipa estiver selecionada,
+// mostra só os jogadores partilhados que ela também tem.
+function renderComuns() {
+  const q = state.q.trim().toLowerCase();
+  const groups = {};
+  rows().forEach(r => {
+    if (state.pos !== "all" && r.pos !== state.pos) return;
+    if (q && !(r.jogador.toLowerCase().includes(q) || r.clube.toLowerCase().includes(q))) return;
+    const key = r.jogador + "||" + r.clube;
+    (groups[key] ??= { jogador: r.jogador, clube: r.clube, pos: r.pos, teams: new Set() }).teams.add(r.equipa);
+  });
+
+  let shared = Object.values(groups).filter(g => g.teams.size > 1);
+  if (state.team !== "all") shared = shared.filter(g => g.teams.has(state.team));
+  shared.sort((a,b) => b.teams.size - a.teams.size || a.jogador.localeCompare(b.jogador));
+
+  const content = document.getElementById("content");
+  if (!shared.length) {
+    content.innerHTML = `<div class="empty">Nenhum jogador repetido entre equipas nesta ronda${state.team !== "all" ? ` (para ${state.team})` : ""}.</div>`;
+    return;
+  }
+  const rowsHTML = shared.map(g => `
+    <div class="shared-row">
+      ${posTagHTML(g.pos)}
+      <div class="pname"><span class="n">${g.jogador}</span><span class="c">${g.clube}</span></div>
+      <div class="owner-badges">${[...g.teams].sort().map(t => `<span class="owner-chip">${t}</span>`).join("")}</div>
+      <span class="shared-count">${g.teams.size}×</span>
+    </div>`).join("");
+  content.innerHTML = `<div class="tablewrap">${rowsHTML}</div>`;
+}
+
+// Titulares de UMA equipa, desenhados no relvado na posição real (ordenados
+// por "slot" — o índice esquerda→direita que o site guarda por jogador).
+let formTeam = null;
+
+function playerTokenHTML(p) {
+  const fix = p.fixture ? `<span class="pfix ${p.fixture}">${p.fixture === "casa" ? "C" : "F"}</span>` : "";
+  return `
+    <div class="pitch-player" title="${p.jogador} — ${p.clube}">
+      <div class="shirt ${p.pos.toLowerCase()}">${p.capitao ? `<span class="shirt-cap">C</span>` : ""}</div>
+      <div class="ptag">${p.jogador}</div>
+      <div class="pclub"><span>${p.clube}</span>${fix}</div>
+    </div>`;
+}
+
+function renderFormacao() {
+  const content = document.getElementById("content");
+  const allTeams = teams();
+  if (!allTeams.length) {
+    content.innerHTML = `<div class="empty">Sem dados para esta ronda.</div>`;
+    return;
+  }
+  if (!formTeam || !allTeams.includes(formTeam)) formTeam = allTeams[0];
+
+  const tabs = allTeams.map(t =>
+    `<button class="form-tab" data-team="${t}" aria-pressed="${t === formTeam}">${t}</button>`).join("");
+
+  const titulares = rows().filter(r => r.equipa === formTeam && r.titular);
+  const porPosicao = pos => titulares.filter(p => p.pos === pos)
+    .sort((a,b) => (a.slot ?? 99) - (b.slot ?? 99));
+  const linhaHTML = pos => `<div class="pitch-row">${porPosicao(pos).map(playerTokenHTML).join("")}</div>`;
+
+  const tr = treinadores()[formTeam];
+
+  content.innerHTML = `
+    <div class="form-tabs">${tabs}</div>
+    <div class="pitch-wrap">
+      ${tr ? `<div class="pitch-coach">Treinador: ${tr.nome}${tr.clube ? ` · ${tr.clube}` : ""}</div>` : ""}
+      <div class="pitch">
+        <div class="pitch-mark circle"></div>
+        <div class="pitch-mark halfway"></div>
+        <div class="pitch-mark box"></div>
+        ${linhaHTML("ATA")}
+        ${linhaHTML("MED")}
+        ${linhaHTML("DEF")}
+        ${linhaHTML("GR")}
+      </div>
+    </div>`;
+
+  content.querySelectorAll(".form-tab").forEach(b => {
+    b.onclick = () => { formTeam = b.dataset.team; renderFormacao(); };
+  });
+}
+
+function renderAll() {
+  renderRounds();
+  renderChips();
+  renderStats();
+  if (state.view === "cards") renderCards();
+  else if (state.view === "table") renderTable();
+  else if (state.view === "formacao") renderFormacao();
+  else renderComuns();
+}
+
+document.getElementById("search").addEventListener("input", e => {
+  state.q = e.target.value;
+  renderAll();
+});
+
+const VIEW_BUTTONS = { cards: "viewCards", table: "viewTable", comuns: "viewComuns", formacao: "viewFormacao" };
+function setView(view) {
+  state.view = view;
+  Object.entries(VIEW_BUTTONS).forEach(([v, id]) =>
+    document.getElementById(id).setAttribute("aria-pressed", String(v === view)));
+  renderAll();
+}
+document.getElementById("viewCards").addEventListener("click", () => setView("cards"));
+document.getElementById("viewTable").addEventListener("click", () => setView("table"));
+document.getElementById("viewComuns").addEventListener("click", () => setView("comuns"));
+document.getElementById("viewFormacao").addEventListener("click", () => setView("formacao"));
+
+renderAll();
+</script>
+</body>
+</html>
