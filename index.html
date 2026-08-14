@@ -325,6 +325,42 @@
   }
   .pfix.casa { background: rgba(255,255,255,0.4); }
 
+  /* ── Vista "Classificação" ──────────────────────── */
+  .rank-refresh { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .rank-refresh button {
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--bg-surface); color: var(--text-2); font-size: 11.5px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .rank-refresh button:hover { border-color: var(--accent); color: var(--accent); }
+  .pending-note {
+    font-size: 12.5px; font-weight: 600; color: #8A5A00; background: #FDF3DC;
+    border: 1px solid #F0DBA0; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .pending-note { color: #F0C868; background: rgba(240,200,104,0.12); border-color: rgba(240,200,104,0.3); }
+  }
+  :root[data-theme="dark"] .pending-note { color: #F0C868; background: rgba(240,200,104,0.12); border-color: rgba(240,200,104,0.3); }
+  .rank-section { margin-bottom: 22px; }
+  .rank-section h3 {
+    font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-muted); margin: 0 0 8px;
+  }
+  .rank-row {
+    display: grid; grid-template-columns: 30px 1fr auto; align-items: center;
+    gap: 12px; padding: 10px 16px; border-top: 1px solid var(--bg-surface-2);
+  }
+  .rank-row:first-child { border-top: none; }
+  .rank-pos {
+    font-size: 13px; font-weight: 800; color: var(--text-muted); font-variant-numeric: tabular-nums;
+  }
+  .rank-row:nth-child(2) .rank-pos { color: #C9A227; }
+  .rank-name { font-weight: 700; font-size: 13.5px; }
+  .rank-sub { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .rank-pts {
+    font-size: 16px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums;
+  }
+
   /* ── Vista "Em comum" ───────────────────────────── */
   .shared-row {
     display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center;
@@ -385,12 +421,13 @@
       <button id="viewTable" aria-pressed="false">Tabela</button>
       <button id="viewComuns" aria-pressed="false">Em comum</button>
       <button id="viewFormacao" aria-pressed="false">Formação</button>
+      <button id="viewRanking" aria-pressed="false">Classificação</button>
     </div>
   </div>
 
   <div id="content"></div>
 
-  <footer class="note">Liga Record — extraído automaticamente. Dados referentes à ronda selecionada.</footer>
+  <footer class="note">Liga Record — extraído automaticamente. Dados referentes à ronda selecionada. · <a href="admin.html" style="color:inherit;">Admin</a></footer>
 </div>
 
 <script>
@@ -399,8 +436,14 @@ const DATA = {"Ronda 2": {"jogadores": [{"equipa": "David Xavier", "pos": "GR", 
 const POS_ORDER = ["GR","DEF","MED","ATA"];
 const POS_LABEL = {GR:"Guarda-Redes", DEF:"Defesas", MED:"Médios", ATA:"Avançados"};
 
+// "_classificacao" é uma chave especial (classificação acumulada da liga),
+// não uma ronda — nunca aparece como separador de ronda.
+function roundKeys() {
+  return Object.keys(DATA).filter(k => k !== "_classificacao");
+}
+
 let state = {
-  round: Object.keys(DATA)[0],
+  round: roundKeys()[0],
   team: "all",
   pos: "all",
   q: "",
@@ -414,6 +457,68 @@ function rows() {
 
 function treinadores() {
   return (DATA[state.round] || {}).treinadores || {};
+}
+
+// Os pontos vêm ao vivo da API (Worker), não estão embutidos na página —
+// é o admin que os grava em admin.html. Calcula-se aqui a classificação
+// (capitão a dobrar) a partir dos pontos + do plantel de cada ronda.
+const WORKER_URL = "https://liga-record-pontos.newideas.workers.dev";
+let PONTOS = {};       // {"R2": {"Nome|Clube": pontos, ...}, ...}
+let pontosCarregados = false;
+
+async function fetchPontos() {
+  try {
+    const resp = await fetch(`${WORKER_URL}/pontos`);
+    PONTOS = await resp.json();
+  } catch (e) {
+    PONTOS = {};
+  }
+  pontosCarregados = true;
+}
+
+function chaveRonda(round) {
+  const m = round.match(/\d+/);
+  return "R" + (m ? m[0] : "");
+}
+
+function calcularEquipaPontos(round) {
+  const pontosRonda = PONTOS[chaveRonda(round)] || {};
+  const jogadores = (DATA[round] || {}).jogadores || [];
+  const pontosEquipa = {};
+  let pendentes = 0;
+  for (const j of jogadores) {
+    if (!j.titular) continue;
+    const chave = `${j.jogador}|${j.clube || ""}`;
+    const bruto = pontosRonda[chave];
+    if (bruto === undefined) pendentes++;
+    let pts = bruto ?? 0;
+    if (j.capitao) pts *= 2;
+    pontosEquipa[j.equipa] = (pontosEquipa[j.equipa] || 0) + pts;
+  }
+  return { pontosEquipa, pendentes };
+}
+
+function rankingRonda() {
+  const { pontosEquipa } = calcularEquipaPontos(state.round);
+  return Object.entries(pontosEquipa).map(([equipa, pontos]) => ({ equipa, pontos }));
+}
+
+function pendentesRonda() {
+  return calcularEquipaPontos(state.round).pendentes;
+}
+
+function classificacaoGeral() {
+  const acumulado = {};
+  const rondasContadas = {};
+  for (const round of roundKeys()) {
+    const { pontosEquipa } = calcularEquipaPontos(round);
+    for (const [equipa, pontos] of Object.entries(pontosEquipa)) {
+      acumulado[equipa] = (acumulado[equipa] || 0) + pontos;
+      rondasContadas[equipa] = (rondasContadas[equipa] || 0) + 1;
+    }
+  }
+  return Object.entries(acumulado).map(([equipa, pontos]) =>
+    ({ equipa, pontos, rondas: rondasContadas[equipa] }));
 }
 
 function teams() {
@@ -433,7 +538,7 @@ function filtered() {
 function renderRounds() {
   const el = document.getElementById("rounds");
   el.innerHTML = "";
-  Object.keys(DATA).forEach(r => {
+  roundKeys().forEach(r => {
     const b = document.createElement("button");
     b.className = "round-tab";
     b.textContent = r;
@@ -713,6 +818,52 @@ function renderFormacao() {
   });
 }
 
+function rankTableHTML(items, { medal = false } = {}) {
+  return items.map((it, i) => `
+    <div class="rank-row">
+      <div class="rank-pos">${medal && i === 0 ? "🏆" : i + 1}</div>
+      <div>
+        <div class="rank-name">${it.equipa}</div>
+        ${it.rondas ? `<div class="rank-sub">${it.rondas} ronda${it.rondas === 1 ? "" : "s"}</div>` : ""}
+      </div>
+      <div class="rank-pts">${it.pontos ?? 0}</div>
+    </div>`).join("");
+}
+
+function renderRanking() {
+  const content = document.getElementById("content");
+
+  if (!pontosCarregados) {
+    content.innerHTML = `<div class="empty">A carregar pontos…</div>`;
+    return;
+  }
+
+  const geral = [...classificacaoGeral()].sort((a,b) => (b.pontos ?? 0) - (a.pontos ?? 0));
+  const rodada = [...rankingRonda()].sort((a,b) => (b.pontos ?? 0) - (a.pontos ?? 0));
+  const pendentes = pendentesRonda();
+
+  content.innerHTML = `
+    <div class="rank-refresh"><button id="btnRefreshPontos">🔄 Atualizar pontos</button></div>
+    ${pendentes > 0 ? `<div class="pending-note">⚠ ${state.round}: falta pontuação de ${pendentes} jogador${pendentes === 1 ? "" : "es"} — os totais abaixo ainda não são finais.</div>` : ""}
+    ${geral.length ? `
+      <div class="rank-section">
+        <h3>Classificação geral</h3>
+        <div class="tablewrap">${rankTableHTML(geral, { medal: true })}</div>
+      </div>` : ""}
+    ${rodada.length ? `
+      <div class="rank-section">
+        <h3>${state.round}</h3>
+        <div class="tablewrap">${rankTableHTML(rodada)}</div>
+      </div>` : `<div class="empty">Sem jogadores nesta ronda.</div>`}
+  `;
+
+  document.getElementById("btnRefreshPontos").addEventListener("click", async (e) => {
+    e.target.textContent = "A atualizar…";
+    await fetchPontos();
+    renderRanking();
+  });
+}
+
 function renderAll() {
   renderRounds();
   renderChips();
@@ -720,6 +871,7 @@ function renderAll() {
   if (state.view === "cards") renderCards();
   else if (state.view === "table") renderTable();
   else if (state.view === "formacao") renderFormacao();
+  else if (state.view === "ranking") renderRanking();
   else renderComuns();
 }
 
@@ -728,7 +880,7 @@ document.getElementById("search").addEventListener("input", e => {
   renderAll();
 });
 
-const VIEW_BUTTONS = { cards: "viewCards", table: "viewTable", comuns: "viewComuns", formacao: "viewFormacao" };
+const VIEW_BUTTONS = { cards: "viewCards", table: "viewTable", comuns: "viewComuns", formacao: "viewFormacao", ranking: "viewRanking" };
 function setView(view) {
   state.view = view;
   Object.entries(VIEW_BUTTONS).forEach(([v, id]) =>
@@ -739,8 +891,10 @@ document.getElementById("viewCards").addEventListener("click", () => setView("ca
 document.getElementById("viewTable").addEventListener("click", () => setView("table"));
 document.getElementById("viewComuns").addEventListener("click", () => setView("comuns"));
 document.getElementById("viewFormacao").addEventListener("click", () => setView("formacao"));
+document.getElementById("viewRanking").addEventListener("click", () => setView("ranking"));
 
 renderAll();
+fetchPontos().then(() => { if (state.view === "ranking") renderRanking(); });
 </script>
 </body>
 </html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Liga Record</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg-page:      #F2F5F1;
+    --bg-surface:   #FFFFFF;
+    --bg-surface-2: #EAF0EC;
+    --border:       #D6E0D9;
+    --text-1:       #12211A;
+    --text-2:       #4B5C52;
+    --text-muted:   #7C8B81;
+    --accent:       #1B6B3A;
+    --accent-strong:#0F4A28;
+    --accent-soft:  #E3F0E7;
+    --pos-gr:       #2a78d6; --pos-gr-bg:  #E4EEFB;
+    --pos-def:      #eb6834; --pos-def-bg: #FBE7DD;
+    --pos-med:      #1baf7a; --pos-med-bg: #DEF3EA;
+    --pos-ata-bg:   #ECEDE9; --pos-ata-brd:#B9C2BB;
+    --error:        #B3261E; --error-bg: #FBE9E7; --error-brd: #F1C4BE;
+    --shadow:       0 1px 2px rgba(18,33,26,0.06), 0 8px 24px -12px rgba(18,33,26,0.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg-page:#0D1712; --bg-surface:#16221B; --bg-surface-2:#1D2B22; --border:#2A3A2F;
+      --text-1:#EDF3EE; --text-2:#B7C4BB; --text-muted:#7E9186;
+      --accent:#45C97C; --accent-strong:#6EDBA0; --accent-soft: rgba(69,201,124,0.14);
+      --pos-gr:#3987e5; --pos-gr-bg: rgba(57,135,229,0.16);
+      --pos-def:#d95926; --pos-def-bg: rgba(217,89,38,0.18);
+      --pos-med:#199e70; --pos-med-bg: rgba(25,158,112,0.18);
+      --pos-ata-bg:#212E25; --pos-ata-brd:#3B4B41;
+      --error:#FF6B60; --error-bg: rgba(255,107,96,0.12); --error-brd: rgba(255,107,96,0.35);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg-page:#0D1712; --bg-surface:#16221B; --bg-surface-2:#1D2B22; --border:#2A3A2F;
+    --text-1:#EDF3EE; --text-2:#B7C4BB; --text-muted:#7E9186;
+    --accent:#45C97C; --accent-strong:#6EDBA0; --accent-soft: rgba(69,201,124,0.14);
+    --pos-gr:#3987e5; --pos-gr-bg: rgba(57,135,229,0.16);
+    --pos-def:#d95926; --pos-def-bg: rgba(217,89,38,0.18);
+    --pos-med:#199e70; --pos-med-bg: rgba(25,158,112,0.18);
+    --pos-ata-bg:#212E25; --pos-ata-brd:#3B4B41;
+    --error:#FF6B60; --error-bg: rgba(255,107,96,0.12); --error-brd: rgba(255,107,96,0.35);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg-page); color: var(--text-1);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px; line-height: 1.45;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 64px; }
+  header.top {
+    display: flex; align-items: center; gap: 10px; padding-bottom: 16px; margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mark {
+    width: 34px; height: 34px; border-radius: 8px; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0;
+  }
+  h1 { margin: 0; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; }
+  .sub { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  a.back { margin-left: auto; font-size: 12.5px; color: var(--text-2); text-decoration: none; font-weight: 600; }
+  a.back:hover { color: var(--accent); }
+
+  .card {
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 20px;
+  }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; }
+  .field input[type="password"], .field select {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-page); color: var(--text-1); font-size: 14px; font-family: inherit;
+  }
+  button.primary {
+    padding: 10px 18px; border-radius: 8px; border: none; background: var(--accent); color: #fff;
+    font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  button.primary:hover { background: var(--accent-strong); }
+  button.primary:disabled { opacity: 0.5; cursor: default; }
+  .error-box {
+    background: var(--error-bg); border: 1px solid var(--error-brd); color: var(--error);
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 14px;
+  }
+  .ok-box {
+    background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent-strong);
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; margin-bottom: 14px;
+  }
+
+  .toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .rounds { display: flex; gap: 6px; }
+  .round-tab {
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--bg-surface); color: var(--text-2); font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .round-tab[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pending-pill {
+    font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    background: var(--bg-surface-2); color: var(--text-2); border: 1px solid var(--border);
+  }
+
+  .prow {
+    display: grid; grid-template-columns: 32px 1fr 90px; align-items: center; gap: 10px;
+    padding: 8px 0; border-top: 1px solid var(--bg-surface-2);
+  }
+  .prow:first-child { border-top: none; }
+  .pos-tag {
+    font-size: 10px; font-weight: 800; padding: 3px 0; border-radius: 5px; text-align: center; border: 1px solid transparent;
+  }
+  .pos-tag.gr  { background: var(--pos-gr-bg);  color: var(--pos-gr); }
+  .pos-tag.def { background: var(--pos-def-bg); color: var(--pos-def); }
+  .pos-tag.med { background: var(--pos-med-bg); color: var(--pos-med); }
+  .pos-tag.ata { background: var(--pos-ata-bg); color: var(--text-1); border-color: var(--pos-ata-brd); }
+  .pname .n { font-weight: 700; font-size: 13px; }
+  .pname .c { color: var(--text-muted); font-size: 11.5px; }
+  .pname .owners { color: var(--text-muted); font-size: 10.5px; }
+  .prow input[type="number"] {
+    width: 100%; padding: 7px 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg-page); color: var(--text-1); font-size: 14px; text-align: center;
+    font-family: inherit; font-variant-numeric: tabular-nums;
+  }
+  .prow input[type="number"].dirty { border-color: var(--accent); background: var(--accent-soft); }
+
+  .savebar { position: sticky; bottom: 0; background: var(--bg-page); padding: 14px 0 4px; margin-top: 6px; }
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="mark">LR</div>
+    <div>
+      <h1>Admin</h1>
+      <div class="sub">Inserir pontos por ronda</div>
+    </div>
+    <a class="back" href="index.html">← Painel</a>
+  </header>
+
+  <div id="gate" class="card">
+    <div id="gateError"></div>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="primary" id="btnEntrar">Entrar</button>
+  </div>
+
+  <div id="painel" style="display:none;"></div>
+</div>
+
+<script>
+const DATA = {"Ronda 2": {"jogadores": [{"equipa": "David Xavier", "pos": "GR", "jogador": "SAMUEL SOARES", "clube": "Benfica", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "GR", "jogador": "CHARLES", "clube": "V. Guimarães", "fixture": null, "titular": false, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "DEF", "jogador": "DAHL", "clube": "Benfica", "fixture": "fora", "titular": true, "capitao": false, "slot": 2}, {"equipa": "David Xavier", "pos": "DEF", "jogador": "EDUARDO QUARESMA", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 1}, {"equipa": "David Xavier", "pos": "DEF", "jogador": "MARTIM FERNANDES", "clube": "FC Porto", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "DEF", "jogador": "ADRIAN BAJRAMI", "clube": "Sp. Braga", "fixture": null, "titular": false, "capitao": false, "slot": 1}, {"equipa": "David Xavier", "pos": "MED", "jogador": "RAPHAEL GUZZO", "clube": "Marítimo", "fixture": "fora", "titular": true, "capitao": false, "slot": 3}, {"equipa": "David Xavier", "pos": "MED", "jogador": "ZALAZAR", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 2}, {"equipa": "David Xavier", "pos": "MED", "jogador": "FROHOLDT", "clube": "FC Porto", "fixture": "fora", "titular": true, "capitao": false, "slot": 1}, {"equipa": "David Xavier", "pos": "MED", "jogador": "CÁSERES", "clube": "Gil Vicente", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "MED", "jogador": "NILE JOHN", "clube": "Moreirense", "fixture": null, "titular": false, "capitao": false, "slot": 2}, {"equipa": "David Xavier", "pos": "ATA", "jogador": "IOANNIDIS", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": true, "slot": 2}, {"equipa": "David Xavier", "pos": "ATA", "jogador": "JHON DURÁN", "clube": "Benfica", "fixture": "fora", "titular": true, "capitao": false, "slot": 1}, {"equipa": "David Xavier", "pos": "ATA", "jogador": "BEGRAOUI", "clube": "Estoril", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "David Xavier", "pos": "ATA", "jogador": "HÉCTOR HERNÁNDEZ", "clube": "Gil Vicente", "fixture": null, "titular": false, "capitao": false, "slot": 3}, {"equipa": "Equipa 2", "pos": "GR", "jogador": "DIOGO COSTA", "clube": "FC Porto", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "GR", "jogador": "BERNARDO FONTES", "clube": "Sp. Braga", "fixture": null, "titular": false, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "DEF", "jogador": "ELIMBI", "clube": "Gil Vicente", "fixture": "fora", "titular": true, "capitao": false, "slot": 2}, {"equipa": "Equipa 2", "pos": "DEF", "jogador": "MAXI ARAÚJO", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 1}, {"equipa": "Equipa 2", "pos": "DEF", "jogador": "LAGERBIELKE", "clube": "Sp. Braga", "fixture": "casa", "titular": true, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "MED", "jogador": "ISSA DOUMBIA", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 3}, {"equipa": "Equipa 2", "pos": "MED", "jogador": "FUKUI", "clube": "Arouca", "fixture": "casa", "titular": true, "capitao": false, "slot": 2}, {"equipa": "Equipa 2", "pos": "MED", "jogador": "BENI", "clube": "V. Guimarães", "fixture": "fora", "titular": true, "capitao": false, "slot": 1}, {"equipa": "Equipa 2", "pos": "MED", "jogador": "HOLSGROVE", "clube": "Estoril", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "ATA", "jogador": "FLÁVIO GONÇALVES", "clube": "Sporting", "fixture": "casa", "titular": true, "capitao": false, "slot": 2}, {"equipa": "Equipa 2", "pos": "ATA", "jogador": "PAU VICTOR", "clube": "Sp. Braga", "fixture": "casa", "titular": true, "capitao": false, "slot": 1}, {"equipa": "Equipa 2", "pos": "ATA", "jogador": "PAVLIDIS", "clube": "Benfica", "fixture": "fora", "titular": true, "capitao": false, "slot": 0}, {"equipa": "Equipa 2", "pos": "ATA", "jogador": "LUÍS GUILHERME", "clube": "Sporting", "fixture": null, "titular": false, "capitao": false, "slot": 3}], "treinadores": {"David Xavier": {"nome": "Rui Borges", "clube": "Sporting"}, "Equipa 2": {"nome": "Rui Borges", "clube": "Sporting"}}}};
+const WORKER_URL = "https://liga-record-pontos.newideas.workers.dev";
+
+const POS_ORDER = ["GR","DEF","MED","ATA"];
+
+function roundKeys() {
+  return Object.keys(DATA).filter(k => k !== "_classificacao");
+}
+function chaveRonda(round) {
+  const m = round.match(/\d+/);
+  return "R" + (m ? m[0] : "");
+}
+
+let state = { round: roundKeys()[0], pontos: {} };
+
+function jogadoresUnicos(round) {
+  const jogadores = (DATA[round] || {}).jogadores || [];
+  const vistos = new Map();
+  for (const j of jogadores) {
+    if (!j.titular) continue;
+    const chave = `${j.jogador}|${j.clube || ""}`;
+    if (!vistos.has(chave)) {
+      vistos.set(chave, { ...j, equipas: [j.equipa] });
+    } else {
+      vistos.get(chave).equipas.push(j.equipa);
+    }
+  }
+  return [...vistos.values()].sort((a,b) =>
+    POS_ORDER.indexOf(a.pos) - POS_ORDER.indexOf(b.pos) || a.jogador.localeCompare(b.jogador));
+}
+
+async function carregarPontos() {
+  try {
+    const resp = await fetch(`${WORKER_URL}/pontos`);
+    state.pontos = await resp.json();
+  } catch {
+    state.pontos = {};
+  }
+}
+
+function render() {
+  const el = document.getElementById("painel");
+  const jogadores = jogadoresUnicos(state.round);
+  const pontosRonda = state.pontos[chaveRonda(state.round)] || {};
+  const pendentes = jogadores.filter(j => pontosRonda[`${j.jogador}|${j.clube || ""}`] === undefined).length;
+
+  const tabs = roundKeys().map(r =>
+    `<button class="round-tab" data-round="${r}" aria-pressed="${r === state.round}">${r}</button>`).join("");
+
+  const linhas = jogadores.map(j => {
+    const chave = `${j.jogador}|${j.clube || ""}`;
+    const valor = pontosRonda[chave];
+    return `
+      <div class="prow">
+        <span class="pos-tag ${j.pos.toLowerCase()}">${j.pos}</span>
+        <div class="pname">
+          <div class="n">${j.jogador}</div>
+          <div class="c">${j.clube || ""}</div>
+          <div class="owners">${j.equipas.join(", ")}</div>
+        </div>
+        <input type="number" step="1" data-chave="${chave}" value="${valor ?? ""}" placeholder="—">
+      </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="toprow">
+      <div class="rounds">${tabs}</div>
+      <span class="pending-pill">${pendentes === 0 ? "✓ tudo preenchido" : `${pendentes} por preencher`}</span>
+    </div>
+    <div class="card">
+      ${jogadores.length ? linhas : `<div class="empty">Sem jogadores nesta ronda.</div>`}
+      <div class="savebar">
+        <div id="saveMsg"></div>
+        <button class="primary" id="btnGravar">Gravar pontos</button>
+      </div>
+    </div>
+  `;
+
+  el.querySelectorAll(".round-tab").forEach(b => {
+    b.onclick = () => { state.round = b.dataset.round; render(); };
+  });
+  el.querySelectorAll('input[type="number"]').forEach(inp => {
+    inp.addEventListener("input", () => inp.classList.add("dirty"));
+  });
+  document.getElementById("btnGravar").onclick = gravar;
+}
+
+async function gravar() {
+  const btn = document.getElementById("btnGravar");
+  const msg = document.getElementById("saveMsg");
+  const inputs = document.querySelectorAll('#painel input[type="number"]');
+  const pontos = {};
+  inputs.forEach(inp => {
+    if (inp.value !== "") pontos[inp.dataset.chave] = Number(inp.value);
+  });
+
+  btn.disabled = true;
+  btn.textContent = "A gravar…";
+  msg.innerHTML = "";
+
+  try {
+    const resp = await fetch(`${WORKER_URL}/pontos/${chaveRonda(state.round)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: sessionStorage.getItem("lr_admin_pw"), pontos }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.erro || "erro desconhecido");
+    msg.innerHTML = `<div class="ok-box">✅ Pontos gravados (${chaveRonda(state.round)}). O painel público atualiza-se em segundos.</div>`;
+    await carregarPontos();
+  } catch (e) {
+    msg.innerHTML = `<div class="error-box">❌ Não consegui gravar: ${e.message}</div>`;
+    if (String(e.message).includes("password")) {
+      sessionStorage.removeItem("lr_admin_pw");
+      document.getElementById("painel").style.display = "none";
+      document.getElementById("gate").style.display = "block";
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Gravar pontos";
+  }
+}
+
+async function tentarEntrar() {
+  const pw = document.getElementById("pw").value;
+  if (!pw) return;
+  sessionStorage.setItem("lr_admin_pw", pw);
+  document.getElementById("gateError").innerHTML = "";
+  await carregarPontos();
+  document.getElementById("gate").style.display = "none";
+  document.getElementById("painel").style.display = "block";
+  render();
+}
+
+document.getElementById("btnEntrar").addEventListener("click", tentarEntrar);
+document.getElementById("pw").addEventListener("keydown", e => { if (e.key === "Enter") tentarEntrar(); });
+
+// Se já tinha password guardada nesta sessão do browser, entra direto.
+if (sessionStorage.getItem("lr_admin_pw")) {
+  document.getElementById("pw").value = sessionStorage.getItem("lr_admin_pw");
+  tentarEntrar();
+}
+</script>
+</body>
+</html>
